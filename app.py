@@ -1,50 +1,355 @@
-from flask import Flask,render_template, request, flash
-from flask_mysqldb import MySQL
+from flask import Flask, render_template, request, jsonify, flash, redirect, url_for, abort, session
+from flask_sqlalchemy import SQLAlchemy
+from flask_login import LoginManager, current_user, login_user, logout_user, login_required, UserMixin
+from werkzeug.security import generate_password_hash, check_password_hash
+from sqlalchemy import create_engine
 
 app = Flask(__name__)
-
-
-# Set a secret key
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://root:$Sammylee1021@localhost/nba_0'
+app.config['SQLALCHEMY_BINDS'] = {'nba_1': 'mysql://root:$Sammylee1021@localhost/nba_1'}
 app.secret_key = 'dsci551'
 
-app.config['MYSQL_HOST'] = 'localhost'
-app.config['MYSQL_USER'] = 'root'
-app.config['MYSQL_PASSWORD'] = '$Sammylee1021'
-app.config['MYSQL_DB'] = 'nba_0'
+db = SQLAlchemy(app)
 
-mysql = MySQL(app)
+# Initialize login manager
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+
+# Define User model for SQLAlchemy
+# class User(db.Model):
+#     __tablename__ = 'user_info'  # Specify the table name
+#     user_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+#     user_name = db.Column(db.String(50), unique=True, nullable=False)
+#     email = db.Column(db.String(50), unique=True, nullable=False)
+#     password_hash = db.Column(db.String(128), nullable=False)  
+class User:
+    def __init__(self, user_id, user_name, email, password_hash):
+        self.user_id = user_id
+        self.user_name = user_name
+        self.email = email
+        self.password_hash = password_hash
+
+    @property
+    def is_authenticated(self):
+        return True
+
+    @property
+    def is_active(self):
+        return True
+
+    @property
+    def is_anonymous(self):
+        return False
+
+    def get_id(self):
+        return str(self.user_id)
+    
+@login_manager.user_loader
+def load_user(user_id):
+    #connection = db.engine.connect()
+    # engines = [
+    #     create_engine('mysql://root:$Sammylee1021@localhost/nba_0'),
+    #     create_engine('mysql://root:$Sammylee1021@localhost/nba_1')
+    # ]
+    engine = create_engine('mysql://root:$Sammylee1021@localhost/nba_0')
+    connection = engine.raw_connection()
+    cur = connection.cursor()
+    try:
+        # Assuming 'user_info' is your table name and it has 'id', 'username', 'email', 'password_hash'
+        cur.execute("SELECT user_id, user_name, email, password_hash FROM user_info WHERE user_id = %s", (user_id,))
+        user_data = cur.fetchone()
+        
+        if user_data:
+            return User(user_id=user_data[0], user_name=user_data[1], email=user_data[2], password_hash=user_data[3])
+    finally:
+        connection.close()
+    return None
+
+# @login_manager.user_loader
+# def load_user(user_id):
+#     return User.query.get(int(user_id))
+
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    if request.method == 'POST':
+        user_name = request.form['user_name']
+        email = request.form['email']
+        password = request.form['password']
+        hashed_password = generate_password_hash(password)
+        #print(user_name, email, hashed_password)
+
+        engines = [
+        create_engine('mysql://root:$Sammylee1021@localhost/nba_0'),
+        create_engine('mysql://root:$Sammylee1021@localhost/nba_1')
+        ]
+
+        for engine in engines:
+            connection = engine.raw_connection()
+            cur = connection.cursor()
+            cur.execute("SELECT * FROM user_info WHERE user_name = %s OR email = %s", (user_name, email))
+            result = cur.fetchone()
+            cur.close()
+            if result:
+                flash('Username or Email already exists.')
+                return redirect(url_for('signup'))
+            
+            cur = connection.cursor()
+            cur.execute("INSERT INTO user_info (user_name, email, password_hash) VALUES (%s, %s, %s)", (user_name, email, hashed_password))
+            connection.commit()
+            cur.close()
+            flash('Account created successfully!')
+
+    return render_template('signup.html')
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        email = request.form['email']
+        password = request.form['password']
+        engines = [
+            create_engine('mysql://root:$Sammylee1021@localhost/nba_0'),
+            create_engine('mysql://root:$Sammylee1021@localhost/nba_1')
+        ]
+
+        for engine in engines:
+                connection = engine.raw_connection()
+                cur = connection.cursor()
+                cur.execute("SELECT user_id, user_name, email, password_hash FROM user_info WHERE email = %s", (email,))
+                user_data = cur.fetchone()
+                if user_data and check_password_hash(user_data[3], password):
+                    user = User(user_id=user_data[0], user_name=user_data[1], email=user_data[2], password_hash=user_data[3])
+                    login_user(user)
+                    
+                    return redirect(url_for('index'))
+                else:
+                    flash('Invalid email or password')
+                cur.close()
+    
+
+    return render_template('login.html')       
+
+
+    # if request.method == 'POST':
+    #     user_name = request.form['user_name']
+    #     password = request.form['password']
+
+    #     connection = db.engine.connect()
+    #     try:
+    #         user_data = connection.execute("SELECT user_id, user_name, email, password_hash FROM user_info WHERE user_name = %s", (user_name,)).fetchone()
+    #         if user_data and check_password_hash(user_data['password_hash'], password):
+    #             user = User(user_id=user_data['user_id'], user_name=user_data['user_name'], email=user_data['email'], password_hash=user_data['password_hash'])
+    #             login_user(user)
+    #             return redirect(url_for('index'))
+    #         else:
+    #             flash('Invalid username or password')
+    #     finally:
+    #         connection.close()
+
+    # return render_template('login.html')
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    flash('You have been logged out.')
+    return redirect(url_for('index'))
 
 
 @app.route('/')
-@app.route('/index', methods=['GET', 'POST'])
+@app.route('/index')
 def index():
-    return render_template('index.html')
+    player_data = []
+    engines = [
+        create_engine('mysql://root:$Sammylee1021@localhost/nba_0'),
+        create_engine('mysql://root:$Sammylee1021@localhost/nba_1')
+    ]
 
-@app.route('/all_team_game_stats', methods=['GET', 'POST']) #TODO
+    for engine in engines:
+        connection = engine.raw_connection()
+        try:
+            cur = connection.cursor()
+            cur.execute("SELECT player_name, team_abbr, person_id, team_id FROM current_players WHERE team_abbr <> ''")
+            player_info = cur.fetchall()
+            player_data.extend(player_info)  # Use extend to flatten the list
+            cur.close()
+        finally:
+            connection.close()
+
+    return render_template('index.html', player_data=player_data, is_authenticated=current_user.is_authenticated)
+
+@app.route('/add_player', methods=['POST'])
+def add_player():
+    person_id = request.form['person_id']
+    player_name = request.form['player_name']
+    position = request.form['position']
+    height = "'" + request.form['height']
+    weight = request.form['weight']
+    last_attended = request.form['last_attended']
+    country = request.form['country']
+    team_id = request.form['team_id']
+    team = request.form['team']
+    pts = request.form['pts']
+    dreb = request.form['dreb']
+    ast = request.form['ast']
+    gp = request.form['gp']
+
+    engines = [
+        create_engine('mysql://root:$Sammylee1021@localhost/nba_0'),
+        create_engine('mysql://root:$Sammylee1021@localhost/nba_1')
+    ]
+
+    # Determine the engine to use based on team_id % 2
+    engine_index = int(team_id) % 2
+    engine = engines[engine_index]
+
+    connection = engine.raw_connection()
+    try:
+        cur = connection.cursor()
+        cur.execute(
+            "INSERT INTO all_draft_picks (person_id, player_name, team_id, team_abbr) VALUES (%s, %s, %s, %s)",
+            (person_id, player_name, team_id, team)
+        )
+        connection.commit()
+        cur.execute("INSERT INTO current_players (person_id, player_name, team_id, team_abbr) VALUES (%s, %s, %s, %s)",
+                    (person_id, player_name, team_id, team))
+        connection.commit()
+        cur.execute("INSERT INTO player_info (name, position, height, weight, last_attended, country) VALUES (%s, %s, %s, %s, %s, %s)",
+                    (player_name, position, height, weight, last_attended, country))
+        connection.commit()
+        cur.execute("INSERT INTO all_players_season_stats_2023_2024 (player_name, team_id, team_abbr, PTS, DREB, AST, GP) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                    (player_name, team_id, team, pts, dreb, ast, gp))
+        connection.commit()
+        cur.close()
+
+    except Exception as e:
+        return jsonify({'error': str(e)})
+    finally:
+        connection.close()
+    return jsonify({'success': True})
+
+@app.route('/query', methods=['GET','POST'])
+@login_required
+def query():
+    if request.method == 'GET':
+        return render_template('query.html')
+    # print('post')
+    query = request.form['query']
+    engines = [
+        create_engine('mysql://root:$Sammylee1021@localhost/nba_0'),
+        create_engine('mysql://root:$Sammylee1021@localhost/nba_1')
+    ]
+    result = []
+    for engine in engines:
+        connection = engine.raw_connection()
+        try:
+            cur = connection.cursor()
+            cur.execute(query)
+            result.append(cur.fetchall())
+            cur.close()
+        finally:
+            connection.close()
+        if result:
+            break
+    
+    return render_template('query.html', query=query, result=result)
+
+
+@app.route('/update_player', methods=['POST'])
+@login_required
+def update_player():
+    data = request.json
+    playerId = data['playerId']
+    playerName = data['playerName']
+    teamName = data['teamName']
+    # print(type(playerId), type(playerName), type(teamName))
+
+    engines = [
+        create_engine('mysql://root:$Sammylee1021@localhost/nba_0'),
+        create_engine('mysql://root:$Sammylee1021@localhost/nba_1')
+    ]
+    for engine in engines:
+        connection = engine.raw_connection()
+        try:
+            cur = connection.cursor()
+            update_query = """
+            UPDATE current_players 
+            SET player_name = %s , team_abbr = %s
+            WHERE person_id = %s;
+            """
+            cur.execute(update_query, (playerName, teamName, playerId))
+            connection.commit()
+            # player_info = cur.fetchall()
+            # print(player_info)
+            cur.close()
+        finally:
+            connection.close()
+
+    return jsonify({'success': True}), 200
+
+@app.route('/delete_player', methods=['POST'])
+@login_required
+def delete_player():
+    data = request.json
+    playerId = data['playerId']
+    # print(type(playerId), type(playerName), type(teamName))
+
+    engines = [
+        create_engine('mysql://root:$Sammylee1021@localhost/nba_0'),
+        create_engine('mysql://root:$Sammylee1021@localhost/nba_1')
+    ]
+    for engine in engines:
+        connection = engine.raw_connection()
+        try:
+            cur = connection.cursor()
+            delete_query = """
+            DELETE 
+            FROM all_draft_picks
+            WHERE person_id = %s;
+            """
+            cur.execute(delete_query, (playerId))
+            connection.commit()
+            # player_info = cur.fetchall()
+            # print(player_info)
+            cur.close()
+        finally:
+            connection.close()
+
+    return jsonify({'success': True}), 200
+
+@app.route('/all_team_game_stats', methods=['GET', 'POST'])
 def all_team_game_stats():
-    cur = mysql.connection.cursor()
-    all_team_game_stats = cur.execute("SELECT * FROM all_team_game_stats")
-    if all_team_game_stats > 0:
-        playerstats = cur.fetchall()
-        return render_template('all_team_game_stats.html', playerstats=playerstats)
+    cur = mysql0.connection.cursor()
+    all_team_game_stats1 = cur.execute("SELECT * FROM all_team_game_stats")
+    playerstats = cur.fetchall()
+
+    return render_template('all_team_game_stats.html', playerstats=playerstats)
     
 @app.route('/player_stats/<int:player_id>', methods=['GET', 'POST'])
-@app.route('/player_stats/<string:player_name>', methods=['GET', 'POST'])
 def player_stats(player_id):
-    cur = mysql.connection.cursor()
-    cur.execute("SELECT ps.*, cp.person_id FROM all_players_season_stats_2023_2024 ps JOIN current_players cp ON ps.player_name = cp.player_name WHERE person_id = %s", (player_id,))
-    player_stat = cur.fetchone()
-    cur.close()
+    player_stat = None
+    engines = [
+        create_engine('mysql://root:$Sammylee1021@localhost/nba_0'),
+        create_engine('mysql://root:$Sammylee1021@localhost/nba_1')
+    ]
+
+    for engine in engines:
+        connection = engine.raw_connection()
+        cur = connection.cursor()
+        cur.execute("SELECT ps.*, cp.person_id, pi.* FROM all_players_season_stats_2023_2024 ps JOIN current_players cp ON ps.player_name = cp.player_name JOIN player_info pi ON ps.player_name = pi.name WHERE person_id = %s", (player_id,))
+        player_stat = cur.fetchone()
+        cur.close()
+        if player_stat:
+            break
+
+    if player_stat is None:
+        abort(404)  # Player not found, return 404 error
 
     # Flash player_stat for debugging
-    flash(player_stat)
+    # flash(player_stat)
 
     return render_template('player_stats.html', player_stat=player_stat)
-    
+
 
 if __name__ == '__main__':
     app.run(debug=True)
-
- 
-
-

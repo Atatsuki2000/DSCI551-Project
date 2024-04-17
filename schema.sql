@@ -32,21 +32,6 @@ CREATE TABLE IF NOT EXISTS all_team_game_stats(
     primary key (game_id)
 );
 
-CREATE TABLE IF NOT EXISTS current_players(
-    person_id INTEGER,
-    player_name varchar(50),
-    from_year INTEGER,
-    to_year INTEGER,
-    team_id INTEGER,
-    team_city varchar(50),
-    team_name varchar(50),
-    team_abbr varchar(3),
-    games_played_flag varchar(1),
-    primary key (person_id),
-    unique key (player_name),
-    index (person_id)
-);
-
 CREATE TABLE IF NOT EXISTS all_draft_picks(
     person_id INTEGER,
     player_name varchar(50),
@@ -62,7 +47,23 @@ CREATE TABLE IF NOT EXISTS all_draft_picks(
     organization varchar(50),
     organization_type varchar(50),
     player_profile_flag varchar(1),
-    foreign key (person_id) references current_players(person_id) on delete cascade on update cascade
+    primary key (person_id)
+);
+
+CREATE TABLE IF NOT EXISTS current_players(
+    person_id INTEGER,
+    player_name varchar(50),
+    from_year INTEGER,
+    to_year INTEGER,
+    team_id INTEGER,
+    team_city varchar(50),
+    team_name varchar(50),
+    team_abbr varchar(3),
+    games_played_flag varchar(1),
+    primary key (person_id),
+    unique key (player_name),
+    index (person_id),
+    foreign key (person_id) references all_draft_picks(person_id) on delete cascade on update cascade
 );
 
 CREATE TABLE IF NOT EXISTS all_players_season_stats_2023_2024(
@@ -132,4 +133,24 @@ CREATE TABLE IF NOT EXISTS all_players_season_stats_2023_2024(
     TD3_RANK INTEGER,
     WNBA_FANTASY_PTS_RANK INTEGER,
     foreign key (player_name) references current_players(player_name) on delete cascade on update cascade
+);
+
+CREATE TABLE IF NOT EXISTS player_info(
+    name varchar(50),
+    position varchar(20),
+    height varchar(6),
+    weight INTEGER,
+    last_attended varchar(50),
+    country varchar(50),
+    foreign key (name) references current_players(player_name) on delete cascade on update cascade
+);
+
+CREATE TABLE IF NOT EXISTS user_info(
+    user_id INTEGER AUTO_INCREMENT,
+    user_name varchar(50) NOT NULL,
+    email varchar(50) NOT NULL,
+    password_hash varchar(2000) NOT NULL,
+    primary key (user_id),
+    unique key (user_name),
+    unique key (email)
 );

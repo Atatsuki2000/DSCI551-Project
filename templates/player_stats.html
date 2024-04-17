@@ -158,7 +158,22 @@
             background-color: var(--red-dark);
             color: var(--yellow);
         }
+        .back-button {
+            display: inline-block;
+            background-color: #333;
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-decoration: none;
+            position: absolute;
+            top: 10px;
+            left: 10px;
+        }
 
+        /* Hover effect for the button */
+        .back-button:hover {
+            background-color: #555;
+        }
         /* Add responsiveness */
         @media (max-width: 768px) {
             .player-header h1 {
@@ -175,6 +190,7 @@
                 width: 300px;
                 height: 300px;
             }
+            
         }
     </style>
 </head>
@@ -182,22 +198,23 @@
 <body>
     <div class="player-card">
         <div class="player-header">
+            <a href="/" class="back-button"><i class="fas fa-arrow-left"></i> Back to Home</a>
             <div class="name-and-logo">
                 <img src="https://cdn.nba.com/logos/nba/{{ player_stat[1] }}/primary/L/logo.svg" alt="None" class="team-logo-watermark">
                 <img src="https://cdn.nba.com/logos/nba/{{ player_stat[1] }}/primary/L/logo.svg" alt="None" class="team-logo"
                     style="margin-left: -300px;">
-                <img src="https://cdn.nba.com/headshots/nba/latest/1040x760/{{ player_stat[-1] }}.png" alt="None" class="player-pic">
+                <img src="https://cdn.nba.com/headshots/nba/latest/1040x760/{{ player_stat[-7] }}.png" alt="None" class="player-pic">
                 <div class="player-postion">
                     <div class="stack" style="display: block;">
                         <div>
-                            <p class="position"> {{ player_stat[2] }} </p>
+                            <p class="position"> {{ player_stat[2] }} | {{ player_stat[-5] }} </p>
                         </div>
                         <div>
                             <h1 class="first-name" style="margin-left:50px; margin-bottom: -25px; text-align : left;">
-                                {{ player_stat[0].split()[0] }}</h1>
+                                {{ player_stat[0].split()[0].upper() }}</h1>
                         </div>
                         <div>
-                            <h1 class="last-name" style="margin-left:50px; margin-top: -25px; text-align : left;">{{ player_stat[0].split()[1] }}
+                            <h1 class="last-name" style="margin-left:50px; margin-top: -25px; text-align : left;">{{ player_stat[0].split()[1].upper() }}
                             </h1>
                         </div>
                     </div>
@@ -206,31 +223,24 @@
         </div>
         <div class="player-stats">
             <div style="padding: 20px;">
-                <div class="stat" , style="padding: 0px;">{{ player_stat[2] }}</div>
+                <div class="stat" , style="padding: 0px;">{{ (player_stat[28] / player_stat[4]) | round(1) }}</div>
                 <div class="label" , style="padding: 0px;">PPG</div>
             </div>
             <div style="padding: 20px;">
-                <div class="stat" , style="padding: 0px;">5.0</div>
+                <div class="stat" , style="padding: 0px;">{{ (player_stat[19] / player_stat[4]) | round(1) }}</div>
                 <div class="label" , style="padding: 0px;">RPG</div>
             </div>
             <div style="padding: 20px;">
-                <div class="stat" , style="padding: 0px;">3.4</div>
+                <div class="stat" , style="padding: 0px;">{{ (player_stat[21] / player_stat[4]) | round(1) }}</div>
                 <div class="label" , style="padding: 0px;">APG</div>
-            </div>
-            <div style="padding: 20px;">
-                <div class="stat" , style="padding: 0px;">11.0</div>
-                <div class="label" , style="padding: 0px;">PIE</div>
             </div>
         </div>
         <div class="player-info">
-            <div>Height: 6'4"</div>
-            <div>Weight: 186lb</div>
-            <div>Country: USA</div>
-            <div>Last Attended: NBA G League Ignite</div>
-            <div>Draft: 2021 R1 Pick 2</div>
-            <div>Experience: 2 Years</div>
+            <div>Height: {{ player_stat[-4][1:] }}</div>
+            <div>Weight: {{ player_stat[-3] }} lb</div>
+            <div>Country: {{ player_stat[-1] }}</div>
+            <div>Last Attended: {{ player_stat[-2] }}</div>
         </div>
-        <button class="follow-button">FOLLOW</button>
     </div>
 </body>
 
