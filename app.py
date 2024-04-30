@@ -152,6 +152,7 @@ def login():
 @login_required
 def logout():
     logout_user()
+    session.clear()
     flash('You have been logged out.')
     return redirect(url_for('index'))
 
@@ -160,6 +161,7 @@ def logout():
 @app.route('/index')
 def index():
     player_data = []
+    followed_players = session.get('followed_players', [])
     engines = [
         create_engine('mysql://root:$Sammylee1021@localhost/nba_0'),
         create_engine('mysql://root:$Sammylee1021@localhost/nba_1')
@@ -176,7 +178,7 @@ def index():
         finally:
             connection.close()
 
-    return render_template('index.html', player_data=player_data, is_authenticated=current_user.is_authenticated)
+    return render_template('index.html', player_data=player_data, is_authenticated=current_user.is_authenticated, followed_players=followed_players)
 
 @app.route('/add_player', methods=['POST'])
 def add_player():
@@ -345,11 +347,47 @@ def player_stats(player_id):
     if player_stat is None:
         abort(404)  # Player not found, return 404 error
 
-    # Flash player_stat for debugging
-    # flash(player_stat)
+    followed_players = session.get('followed_players', [])
+    is_followed = player_id in followed_players
+    # print(is_followed)
+    # print(is_followed)
+    return render_template('player_stats.html', player_stat=player_stat, is_followed=is_followed)
 
-    return render_template('player_stats.html', player_stat=player_stat)
+@app.route('/follow_player/<int:player_id>', methods=['POST'])
+def follow_player(player_id):
+    try:
+        followed_players = session.get('followed_players', [])
+        if player_id not in followed_players:
+            followed_players.append(player_id)
+            # print(followed_players)
+            session['followed_players'] = followed_players.copy()
+            # print(session['followed_players'])
+            session.modified = True
+            return jsonify(success=True)
+    except Exception as e:
+        print(e)
 
+    return jsonify(success=False)
+@app.route('/is_followed/<int:player_id>', methods=['GET'])
+def is_followed(player_id):
+    followed_players = session.get('followed_players', [])
+    return jsonify(is_followed=player_id in followed_players)
+
+
+@app.route('/unfollow_player/<int:player_id>', methods=['POST'])
+def unfollow_player(player_id):
+    try:
+        followed_players = session.get('followed_players', [])
+        # print(followed_players)
+        if player_id in followed_players:
+            followed_players.remove(player_id)
+            session['followed_players'] = followed_players.copy()
+            session.modified = True
+            return jsonify(success=True)
+    except Exception as e:
+        print(e)
+
+    return jsonify(success=False)
 
 if __name__ == '__main__':
     app.run(debug=True)

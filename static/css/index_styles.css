@@ -173,3 +173,17 @@ tr:hover {
     border: 1px solid #ccc;
     z-index: index;
 }
+.follow-button {
+    display: block;
+    width: 100%;
+    text-align: center;
+    padding: var(--spacing-medium);
+    background-color: var(--yellow);
+    color: var(--black);
+    font-weight: bold;
+    border-radius: 5px;
+    cursor: pointer;
+    border: none;
+    font-size: 1.2em;
+    transition: background-color 0.3s ease;
+}
