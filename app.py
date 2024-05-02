@@ -16,13 +16,7 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
-# Define User model for SQLAlchemy
-# class User(db.Model):
-#     __tablename__ = 'user_info'  # Specify the table name
-#     user_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-#     user_name = db.Column(db.String(50), unique=True, nullable=False)
-#     email = db.Column(db.String(50), unique=True, nullable=False)
-#     password_hash = db.Column(db.String(128), nullable=False)  
+# Define User class
 class User:
     def __init__(self, user_id, user_name, email, password_hash):
         self.user_id = user_id
@@ -56,7 +50,6 @@ def load_user(user_id):
     connection = engine.raw_connection()
     cur = connection.cursor()
     try:
-        # Assuming 'user_info' is your table name and it has 'id', 'username', 'email', 'password_hash'
         cur.execute("SELECT user_id, user_name, email, password_hash FROM user_info WHERE user_id = %s", (user_id,))
         user_data = cur.fetchone()
         
@@ -65,10 +58,6 @@ def load_user(user_id):
     finally:
         connection.close()
     return None
-
-# @login_manager.user_loader
-# def load_user(user_id):
-#     return User.query.get(int(user_id))
 
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
@@ -128,25 +117,6 @@ def login():
     
 
     return render_template('login.html')       
-
-
-    # if request.method == 'POST':
-    #     user_name = request.form['user_name']
-    #     password = request.form['password']
-
-    #     connection = db.engine.connect()
-    #     try:
-    #         user_data = connection.execute("SELECT user_id, user_name, email, password_hash FROM user_info WHERE user_name = %s", (user_name,)).fetchone()
-    #         if user_data and check_password_hash(user_data['password_hash'], password):
-    #             user = User(user_id=user_data['user_id'], user_name=user_data['user_name'], email=user_data['email'], password_hash=user_data['password_hash'])
-    #             login_user(user)
-    #             return redirect(url_for('index'))
-    #         else:
-    #             flash('Invalid username or password')
-    #     finally:
-    #         connection.close()
-
-    # return render_template('login.html')
 
 @app.route('/logout')
 @login_required
@@ -318,14 +288,6 @@ def delete_player():
             connection.close()
 
     return jsonify({'success': True}), 200
-
-@app.route('/all_team_game_stats', methods=['GET', 'POST'])
-def all_team_game_stats():
-    cur = mysql0.connection.cursor()
-    all_team_game_stats1 = cur.execute("SELECT * FROM all_team_game_stats")
-    playerstats = cur.fetchall()
-
-    return render_template('all_team_game_stats.html', playerstats=playerstats)
     
 @app.route('/player_stats/<int:player_id>', methods=['GET', 'POST'])
 def player_stats(player_id):
