@@ -1,4 +1,4 @@
-# DSCI 550 Final Project
+# DSCI 551 Final Project
 
 ## Name of the Project
 
