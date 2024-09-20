@@ -1,5 +1,3 @@
-# DSCI 551 Final Project
-
 ## Name of the Project
 
 NBA Games Real Time Database
