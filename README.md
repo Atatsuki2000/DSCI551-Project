@@ -4,10 +4,6 @@
 
 NBA Games Real Time Database
 
-## Team Members
-
-Ming Shan Lee, Yun Jing Chang, Takaaki Morita
-
 ## Project File Structure Overview
 
 This README provides an overview of the directory and file structure for this project, which is designed to interact with NBA data using a Flask web application and MySQL databases.
